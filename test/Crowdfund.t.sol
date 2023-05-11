@@ -12,9 +12,8 @@ contract CrowdfundTest is Test {
     /* ========== STATE VARIABLES ========== */
     MockToken public mockToken;
     Crowdfund public crowdfund;
-    address launcher = address(0x123);
-    address pledger1 = address(0x456);
-    address pledger2 = address(0x789);
+    address pledger1 = address(0x123);
+    address pledger2 = address(0x456);
     uint256 campaignGoal = 5 ether;
     uint32 startAt = 2 days;
     uint32 endAt = 5 days;
@@ -40,8 +39,7 @@ contract CrowdfundTest is Test {
 
         vm.label(address(crowdfund), "Crowdfund");
         vm.label(address(mockToken), "MockToken");
-        vm.label(address(this), "Test Contract");
-        vm.label(launcher, "Launcher");
+        vm.label(address(this), "Launcher");
         vm.label(pledger1, "Pledger1");
         vm.label(pledger2, "Pledger2");
     }
@@ -49,12 +47,10 @@ contract CrowdfundTest is Test {
     /* ========== HELPER FUNCTIONS ========== */
 
     function launchCampaigns(uint256 _numCampaigns) public {
-        vm.startPrank(launcher);
         for (uint256 i = 1; i <= _numCampaigns; i++) {
             crowdfund.launch(campaignGoal, startAt, endAt);
             assertEq((crowdfund.getCampaign(i)).id, i);
         }
-        vm.stopPrank();
     }
 
     /* ========== initialize ========== */
@@ -70,15 +66,44 @@ contract CrowdfundTest is Test {
     }
 
     /* ========== launch ========== */
-    function test__launchInvalidStartAtReverts() public {}
+    function test__launchInvalidStartAtReverts() public {
+        uint32 invalidStartTime = uint32(0);
+        vm.expectRevert("start at < now");
+        crowdfund.launch(campaignGoal, invalidStartTime, endAt);
+    }
 
-    function test__launchCampaignTooShortReverts() public {}
+    function test__launchCampaignTooShortReverts() public {
+        uint32 invalidEndTime = uint32(startAt + 10);
+        vm.expectRevert("not in min & max duration");
+        crowdfund.launch(campaignGoal, startAt, invalidEndTime);
+    }
 
-    function test__launchCampaignTooLongReverts() public {}
+    function test__launchCampaignTooLongReverts() public {
+        uint32 invalidEndTime = uint32(startAt + 30 days);
+        vm.expectRevert("not in min & max duration");
+        crowdfund.launch(campaignGoal, startAt, invalidEndTime);
+    }
 
-    function test__launch() public {}
+    function test__launch() public {
+        crowdfund.launch(campaignGoal, startAt, endAt);
+        Crowdfund.Campaign memory campaign = crowdfund.getCampaign(1);
+        assertEq(campaign.id, 1);
+        assertEq(campaign.creator, address(this));
+        assertEq(campaign.goal, campaignGoal);
+        assertEq(campaign.pledged, 0);
+        assertEq(campaign.startAt, startAt);
+        assertEq(campaign.endAt, endAt);
+        assertEq(campaign.claimed, false);
+        assertEq(campaign.cancelled, false);
+    }
 
-    function test__launchEvent() public {}
+    function test__launchEvent() public {
+        vm.expectEmit(true, true, false, true, address(crowdfund));
+        emit Launch(1, address(this), campaignGoal, startAt, endAt);
+        crowdfund.launch(campaignGoal, startAt, endAt);
+        Crowdfund.Campaign memory campaign = crowdfund.getCampaign(1);
+        assertEq(campaign.id, 1);
+    }
 
     /* ========== cancel ========== */
     function test__cancelCampaignDoesNotExistReverts() public {}
