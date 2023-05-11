@@ -127,6 +127,29 @@ contract Crowdfund is Initializable {
         maxDuration = _maxDuration;
     }
 
+    /* ========== VIEW FUNCTIONS ========== */
+    /**
+     * @dev function to return Campaign struct for given id
+     * @param _id - the id of the campaign
+     */
+
+    function getCampaign(uint256 _id) external view returns (Campaign memory) {
+        return campaigns[_id];
+    }
+
+    /**
+     * @dev function to return amount of tokens pledged by given address
+     * @param _id - the id of the campaign
+     * @param _pledger - address of pledger to get amount of tokens pledged by
+     */
+
+    function getPledgedAmount(
+        uint256 _id,
+        address _pledger
+    ) external view returns (uint256) {
+        return pledgedAmount[_id][_pledger];
+    }
+
     /* ========== EXTERNAL FUNCTIONS ========== */
 
     /**
@@ -206,7 +229,7 @@ contract Crowdfund is Initializable {
     function unpledge(
         uint256 _id,
         uint256 _amount
-    ) external campaignExists(_id) campaignNotEnded(_id) {
+    ) external campaignExists(_id) campaignStarted(_id) campaignNotEnded(_id) {
         _refund(msg.sender, _id, _amount);
 
         emit Unpledged(_id, msg.sender, _amount);
@@ -234,7 +257,7 @@ contract Crowdfund is Initializable {
 
         campaign.claimed = true;
 
-        token.safeIncreaseAllowance(msg.sender, campaign.pledged);
+        // token.safeIncreaseAllowance(msg.sender, campaign.pledged);
         token.safeTransfer(msg.sender, campaign.pledged);
 
         emit Claim(_id);
@@ -275,7 +298,7 @@ contract Crowdfund is Initializable {
         pledgedAmount[_id][_donor] -= _amount;
         campaigns[_id].pledged -= _amount;
 
-        token.safeIncreaseAllowance(_donor, _amount);
+        // token.safeIncreaseAllowance(_donor, _amount);
         token.safeTransfer(_donor, _amount);
     }
 }
