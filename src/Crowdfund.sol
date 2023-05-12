@@ -229,7 +229,7 @@ contract Crowdfund is Initializable {
     function unpledge(
         uint256 _id,
         uint256 _amount
-    ) external campaignExists(_id) campaignStarted(_id) campaignNotEnded(_id) {
+    ) external campaignExists(_id) campaignNotEnded(_id) {
         _refund(msg.sender, _id, _amount);
 
         emit Unpledged(_id, msg.sender, _amount);
@@ -257,7 +257,6 @@ contract Crowdfund is Initializable {
 
         campaign.claimed = true;
 
-        // token.safeIncreaseAllowance(msg.sender, campaign.pledged);
         token.safeTransfer(msg.sender, campaign.pledged);
 
         emit Claim(_id);
@@ -298,7 +297,6 @@ contract Crowdfund is Initializable {
         pledgedAmount[_id][_donor] -= _amount;
         campaigns[_id].pledged -= _amount;
 
-        // token.safeIncreaseAllowance(_donor, _amount);
         token.safeTransfer(_donor, _amount);
     }
 }
