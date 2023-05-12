@@ -44,6 +44,12 @@ contract CrowdfundTest is Test {
         vm.label(pledger2, "Pledger2");
     }
 
+    /* ========== MODIFIERS ========== */
+    modifier launchCampaignsBefore(uint256 _numCampaings) {
+        launchCampaigns(_numCampaings);
+        _;
+    }
+
     /* ========== HELPER FUNCTIONS ========== */
 
     function launchCampaigns(uint256 _numCampaigns) public {
@@ -106,17 +112,55 @@ contract CrowdfundTest is Test {
     }
 
     /* ========== cancel ========== */
-    function test__cancelCampaignDoesNotExistReverts() public {}
+    function test__cancelCampaignDoesNotExistReverts()
+        public
+        launchCampaignsBefore(1)
+    {
+        vm.expectRevert("campaign does not exist");
+        crowdfund.cancel(2);
+        assertFalse((crowdfund.getCampaign(1)).cancelled);
+    }
 
-    function test__cancelNotCampaignCreatorReverts() public {}
+    function test__cancelNotCampaignCreatorReverts()
+        public
+        launchCampaignsBefore(1)
+    {
+        vm.prank(pledger1);
+        vm.expectRevert("not creator");
+        crowdfund.cancel(1);
+        assertFalse((crowdfund.getCampaign(1)).cancelled);
+    }
 
-    function test__cancel() public {}
+    function test__cancel() public launchCampaignsBefore(1) {
+        crowdfund.cancel(1);
+        assertTrue((crowdfund.getCampaign(1)).cancelled);
+    }
 
-    function test__cancelMultpleCampaigns() public {}
+    function test__cancelMultpleCampaigns() public launchCampaignsBefore(3) {
+        crowdfund.cancel(1);
+        assertTrue((crowdfund.getCampaign(1)).cancelled);
+        crowdfund.cancel(2);
+        assertTrue((crowdfund.getCampaign(2)).cancelled);
+        crowdfund.cancel(3);
+        assertTrue((crowdfund.getCampaign(3)).cancelled);
+    }
 
-    function test__cancelAlreadyCancelledReverts() public {}
+    function test__cancelAlreadyCancelledReverts()
+        public
+        launchCampaignsBefore(1)
+    {
+        crowdfund.cancel(1);
+        assertTrue((crowdfund.getCampaign(1)).cancelled);
+        vm.expectRevert("campaign cancelled");
+        crowdfund.cancel(1);
+    }
 
-    function test__cancelEvent() public {}
+    function test__cancelEvent() public launchCampaignsBefore(1) {
+        vm.expectEmit(true, false, false, true, address(crowdfund));
+        emit Cancel(1);
+        crowdfund.cancel(1);
+        assertTrue((crowdfund.getCampaign(1)).cancelled);
+    }
 
     /* ========== pledge ========== */
     function test__pledgeCampaignDoesNotExistReverts() public {}
