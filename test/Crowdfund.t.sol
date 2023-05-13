@@ -536,6 +536,7 @@ contract CrowdfundTest is Test {
         crowdfund.refund(1);
 
         assertEq((crowdfund.getCampaign(1)).pledged, pledgeAmount);
+        assertEq((crowdfund.getPledgedAmount(1, pledger1)), pledgeAmount);
         assertEq(mockToken.balanceOf(address(crowdfund)), pledgeAmount);
         assertEq(mockToken.balanceOf(pledger1), 0);
     }
@@ -552,6 +553,7 @@ contract CrowdfundTest is Test {
         crowdfund.refund(1);
 
         assertEq((crowdfund.getCampaign(1)).pledged, campaignGoal);
+        assertEq((crowdfund.getPledgedAmount(1, pledger1)), campaignGoal);
         assertEq(mockToken.balanceOf(address(crowdfund)), campaignGoal);
         assertEq(mockToken.balanceOf(pledger1), 0);
     }
@@ -568,6 +570,7 @@ contract CrowdfundTest is Test {
 
         assertEq((crowdfund.getCampaign(1)).pledged, 0);
         assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+        assertEq((crowdfund.getPledgedAmount(1, pledger1)), 0);
         assertEq(mockToken.balanceOf(pledger1), pledgeAmount);
     }
 
@@ -580,12 +583,17 @@ contract CrowdfundTest is Test {
         vm.prank(pledger1);
         crowdfund.unpledge(1, 1 ether);
         assertEq((crowdfund.getCampaign(1)).pledged, campaignGoal - 1 ether);
+        assertEq(
+            (crowdfund.getPledgedAmount(1, pledger1)),
+            campaignGoal - 1 ether
+        );
         assertEq(mockToken.balanceOf(pledger1), 1 ether);
 
         vm.warp(endAt + 100);
         vm.prank(pledger1);
         crowdfund.refund(1);
         assertEq((crowdfund.getCampaign(1)).pledged, 0);
+        assertEq((crowdfund.getPledgedAmount(1, pledger1)), 0);
         assertEq(mockToken.balanceOf(address(crowdfund)), 0);
         assertEq(mockToken.balanceOf(pledger1), campaignGoal);
     }
@@ -611,6 +619,9 @@ contract CrowdfundTest is Test {
         assertEq((crowdfund.getCampaign(1)).pledged, 0);
         assertEq((crowdfund.getCampaign(2)).pledged, 0);
         assertEq((crowdfund.getCampaign(3)).pledged, 0);
+        assertEq((crowdfund.getPledgedAmount(1, pledger1)), 0);
+        assertEq((crowdfund.getPledgedAmount(2, pledger1)), 0);
+        assertEq((crowdfund.getPledgedAmount(3, pledger2)), 0);
         assertEq(mockToken.balanceOf(address(crowdfund)), 0);
         assertEq(mockToken.balanceOf(pledger1), pledgeAmount * 3);
         assertEq(mockToken.balanceOf(pledger2), pledgeAmount * 3);
