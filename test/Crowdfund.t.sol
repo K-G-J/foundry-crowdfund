@@ -406,34 +406,166 @@ contract CrowdfundTest is Test {
     }
 
     /* ========== claim ========== */
-    function test__claimCampaignDoesNotExistReverts() public {}
+    function test__claimCampaignDoesNotExistReverts() public {
+        vm.expectRevert("campaign does not exist");
+        crowdfund.claim(1);
+    }
 
-    function test__claimNotCampaignCreatorReverts() public {}
+    function test__claimNotCampaignCreatorReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        vm.warp(endAt + 100);
+        vm.expectRevert("not creator");
+        vm.prank(pledger1);
+        crowdfund.claim(1);
+    }
 
-    function test__claimCampaignCancelledReverts() public {}
+    function test__claimCampaignCancelledReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        crowdfund.cancel(1);
 
-    function test__claimPledgedLessThanGoalReverts() public {}
+        vm.warp(endAt + 100);
+        vm.expectRevert("campaign cancelled");
+        crowdfund.claim(1);
+    }
 
-    function test__claim() public {}
+    function test__claimCampaignNotEnded()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        vm.expectRevert("campaign not ended");
+        crowdfund.claim(1);
+    }
 
-    function test__claimAlreadyClaimedReverts() public {}
+    function test__claimPledgedLessThanGoalReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal - 2 ether)
+        pledgeToCampaign(1, campaignGoal - 2 ether)
+    {
+        vm.warp(endAt + 100);
+        vm.expectRevert("pledged < goal");
+        crowdfund.claim(1);
+    }
 
-    function test__claimMultipleCampaigns() public {}
+    function test__claim()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        vm.warp(endAt + 100);
+        crowdfund.claim(1);
 
-    function test__claimEvent() public {}
+        assertTrue((crowdfund.getCampaign(1)).claimed);
+        assertEq(mockToken.balanceOf(address(this)), campaignGoal);
+        assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+    }
+
+    function test__claimAlreadyClaimedReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        vm.warp(endAt + 100);
+        crowdfund.claim(1);
+        assertTrue((crowdfund.getCampaign(1)).claimed);
+
+        vm.expectRevert("claimed");
+        crowdfund.claim(1);
+    }
+
+    function test__claimMultipleCampaigns()
+        public
+        launchCampaignsBefore(3)
+        mintAndApproveTokenTransfer(campaignGoal * 3)
+        pledgeToCampaign(1, campaignGoal)
+        pledgeToCampaign(2, campaignGoal)
+        pledgeToCampaign(3, campaignGoal)
+    {
+        vm.warp(endAt + 100);
+        crowdfund.claim(1);
+        crowdfund.claim(2);
+        crowdfund.claim(3);
+
+        assertTrue((crowdfund.getCampaign(1)).claimed);
+        assertTrue((crowdfund.getCampaign(2)).claimed);
+        assertTrue((crowdfund.getCampaign(3)).claimed);
+        assertEq(mockToken.balanceOf(address(this)), campaignGoal * 3);
+        assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+    }
+
+    function test__claimEvent()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {
+        vm.warp(endAt + 100);
+        vm.expectEmit(true, false, false, true, address(crowdfund));
+        emit Claim(1);
+        crowdfund.claim(1);
+        assertTrue((crowdfund.getCampaign(1)).claimed);
+    }
 
     /* ========== refund ========== */
-    function test__refundCampaignDoesNotExistReverts() public {}
+    function test__refundCampaignDoesNotExistReverts() public {
+        vm.expectRevert("campaign does not exist");
+        crowdfund.refund(1);
+    }
 
-    function test__refundCampaignNotEndedReverts() public {}
+    function test__refundCampaignNotEndedReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(pledgeAmount)
+        pledgeToCampaign(1, pledgeAmount)
+    {}
 
-    function test__refundCampaignSuccededReverts() public {}
+    function test__refundCampaignSuccededReverts()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {}
 
-    function test__refund() public {}
+    function test__refund()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(pledgeAmount)
+        pledgeToCampaign(1, pledgeAmount)
+    {}
 
-    function test__refundAllowsUnpledgeAndRefund() public {}
+    function test__refundAllowsUnpledgeAndRefund()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(campaignGoal)
+        pledgeToCampaign(1, campaignGoal)
+    {}
 
-    function test__refundMultpleCampaigns() public {}
+    function test__refundMultpleCampaigns()
+        public
+        launchCampaignsBefore(3)
+        mintAndApproveTokenTransfer(pledgeAmount * 3)
+        pledgeToCampaign(1, pledgeAmount)
+        pledgeToCampaign(2, pledgeAmount)
+    {
+        // pledger2 pledge and refund from campaign 3
+    }
 
-    function test__refundEvent() public {}
+    function test__refundEvent()
+        public
+        launchCampaignsBefore(1)
+        mintAndApproveTokenTransfer(pledgeAmount)
+        pledgeToCampaign(1, pledgeAmount)
+    {}
 }
