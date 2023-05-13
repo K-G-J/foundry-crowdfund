@@ -521,6 +521,7 @@ contract CrowdfundTest is Test {
     /* ========== refund ========== */
     function test__refundCampaignDoesNotExistReverts() public {
         vm.expectRevert("campaign does not exist");
+        vm.prank(pledger1);
         crowdfund.refund(1);
     }
 
@@ -529,28 +530,65 @@ contract CrowdfundTest is Test {
         launchCampaignsBefore(1)
         mintAndApproveTokenTransfer(pledgeAmount)
         pledgeToCampaign(1, pledgeAmount)
-    {}
+    {
+        vm.expectRevert("campaign not ended");
+        vm.prank(pledger1);
+        crowdfund.refund(1);
+
+        assertEq((crowdfund.getCampaign(1)).pledged, pledgeAmount);
+        assertEq(mockToken.balanceOf(address(crowdfund)), pledgeAmount);
+        assertEq(mockToken.balanceOf(pledger1), 0);
+    }
 
     function test__refundCampaignSuccededReverts()
         public
         launchCampaignsBefore(1)
         mintAndApproveTokenTransfer(campaignGoal)
         pledgeToCampaign(1, campaignGoal)
-    {}
+    {
+        vm.warp(endAt + 100);
+        vm.prank(pledger1);
+        vm.expectRevert("pledged >= goal");
+        crowdfund.refund(1);
+
+        assertEq((crowdfund.getCampaign(1)).pledged, campaignGoal);
+        assertEq(mockToken.balanceOf(address(crowdfund)), campaignGoal);
+        assertEq(mockToken.balanceOf(pledger1), 0);
+    }
 
     function test__refund()
         public
         launchCampaignsBefore(1)
         mintAndApproveTokenTransfer(pledgeAmount)
         pledgeToCampaign(1, pledgeAmount)
-    {}
+    {
+        vm.warp(endAt + 100);
+        vm.prank(pledger1);
+        crowdfund.refund(1);
+
+        assertEq((crowdfund.getCampaign(1)).pledged, 0);
+        assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+        assertEq(mockToken.balanceOf(pledger1), pledgeAmount);
+    }
 
     function test__refundAllowsUnpledgeAndRefund()
         public
         launchCampaignsBefore(1)
         mintAndApproveTokenTransfer(campaignGoal)
         pledgeToCampaign(1, campaignGoal)
-    {}
+    {
+        vm.prank(pledger1);
+        crowdfund.unpledge(1, 1 ether);
+        assertEq((crowdfund.getCampaign(1)).pledged, campaignGoal - 1 ether);
+        assertEq(mockToken.balanceOf(pledger1), 1 ether);
+
+        vm.warp(endAt + 100);
+        vm.prank(pledger1);
+        crowdfund.refund(1);
+        assertEq((crowdfund.getCampaign(1)).pledged, 0);
+        assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+        assertEq(mockToken.balanceOf(pledger1), campaignGoal);
+    }
 
     function test__refundMultpleCampaigns()
         public
@@ -559,7 +597,23 @@ contract CrowdfundTest is Test {
         pledgeToCampaign(1, pledgeAmount)
         pledgeToCampaign(2, pledgeAmount)
     {
-        // pledger2 pledge and refund from campaign 3
+        vm.prank(pledger2);
+        crowdfund.pledge(3, pledgeAmount);
+
+        vm.warp(endAt + 100);
+        vm.startPrank(pledger1);
+        crowdfund.refund(1);
+        crowdfund.refund(2);
+        vm.stopPrank();
+        vm.prank(pledger2);
+        crowdfund.refund(3);
+
+        assertEq((crowdfund.getCampaign(1)).pledged, 0);
+        assertEq((crowdfund.getCampaign(2)).pledged, 0);
+        assertEq((crowdfund.getCampaign(3)).pledged, 0);
+        assertEq(mockToken.balanceOf(address(crowdfund)), 0);
+        assertEq(mockToken.balanceOf(pledger1), pledgeAmount * 3);
+        assertEq(mockToken.balanceOf(pledger2), pledgeAmount * 3);
     }
 
     function test__refundEvent()
@@ -567,5 +621,13 @@ contract CrowdfundTest is Test {
         launchCampaignsBefore(1)
         mintAndApproveTokenTransfer(pledgeAmount)
         pledgeToCampaign(1, pledgeAmount)
-    {}
+    {
+        vm.warp(endAt + 100);
+        vm.expectEmit(true, true, false, true, address(crowdfund));
+        vm.prank(pledger1);
+        emit Refund(1, pledger1, pledgeAmount);
+        crowdfund.refund(1);
+        assertEq((crowdfund.getCampaign(1)).pledged, 0);
+        assertEq(mockToken.balanceOf(pledger1), pledgeAmount);
+    }
 }
